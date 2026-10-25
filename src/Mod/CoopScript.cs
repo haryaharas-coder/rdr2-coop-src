@@ -497,6 +497,20 @@ namespace RDR2Coop.Mod
 
             var me = Game.Player.Character;
             if (me == null || !me.Exists()) return;
+
+            // Feature: suppress Dead Eye / Eagle Eye slow-motion in a session so time doesn't slow
+            // down for partners. Also un-pause the game if the pause menu is opened, so the session
+            // keeps ticking (the game keeps its menu open; only simulation time is restored).
+            if (Extras.SuppressSlowMo)
+            {
+                MISC.SET_TIME_SCALE(1f);
+                if (HUD.IS_PAUSE_MENU_ACTIVE()) MISC.SET_GAME_PAUSED(false);
+            }
+            if (Extras.VoiceChat)
+            {
+                VOICE._0x79F478FF5F9F4F05(true);
+                VOICE._0x58125B691F6827D5(300.0f);
+            }
             byte myId = _link.MyId;
             var myPos = ToNet(me.Position);
 
@@ -637,6 +651,9 @@ namespace RDR2Coop.Mod
                     r.AppliedMountHorse = horse;
                     Log($"{_link.NameOf(kv.Key)}'s horse look applied ({r.MountLook.Tags.Count} pieces)");
                 }
+                // Keep the puppet's cached mount look up to date so FollowMounted can re-apply it
+                // immediately when it re-creates the horse (fixes: saddle removal not visible on friend's screen).
+                if (r.HasMountLook) r.Puppet.LastMountLook = r.MountLook;
                 // Our game runs the area and they drive one of our real vehicles:
                 // it follows the copy they steer in their game (a train by its speed alone).
                 bool train = owner == myId && vehicle != 0 && TrainDrive.IsTrain(vehicle);
@@ -686,6 +703,14 @@ namespace RDR2Coop.Mod
                 Trace("tick: mirror");
                 _mirror.Tick(_link, owner, puppets, now);
                 _doors.Tick(_link, owner, null, now);
+                if (Sync.FriendlyFire)
+                {
+                    foreach (var kv in puppets)
+                    {
+                        int damage = kv.Value.TakeHits(me.Handle, out int bone);
+                        if (damage > 0) _link.SendHit(kv.Key, 0, (short)Math.Min(damage, short.MaxValue), bone);
+                    }
+                }
             }
             Trace("tick: explosions");
             _explosions.Tick(_link, me, owner, puppets, id => _remotes.TryGetValue(id, out var x) && x.HasLast ? x.Last : (PlayerState?)null, now);
@@ -789,11 +814,11 @@ namespace RDR2Coop.Mod
                 }
                 return;
             }
-            // Only the game that runs our area has NPCs that can reach us.
-            if (from != _owner || _down.IsDown || TableGames.Busy) return;   // the card games make us invincible at the table too
+            // Only the game that runs our area has NPCs that can reach us (or partners when FriendlyFire is on).
+            if ((from != _owner && !Sync.FriendlyFire) || _down.IsDown || TableGames.Busy) return;   // the card games make us invincible at the table too
             var me = Game.Player.Character;
             if (me == null || !me.Exists() || me.IsDead) return;
-            if (_down.WouldFinish(hit.Damage)) { _down.GoDown($"hit by an NPC in {_link.NameOf(from)}'s game"); return; }
+            if (_down.WouldFinish(hit.Damage)) { _down.GoDown(from != _owner ? $"shot by {_link.NameOf(from)}" : $"hit by an NPC in {_link.NameOf(from)}'s game"); return; }
             PED.APPLY_DAMAGE_TO_PED(me.Handle, hit.Damage, 0, hit.Bone, 0);
         }
 
@@ -851,7 +876,12 @@ namespace RDR2Coop.Mod
                 if (e.KeyCode == (_statusKey == Keys.None ? Keys.F10 : _statusKey) && _status.Length > 0) Say(_status);
                 return;
             }
-            if (_chat.OnKey(e.KeyCode, _link, _browser.IsOpen || PickList.IsOpen, _clock.ElapsedMilliseconds)) return;
+            // Guard: never open the browser/party menu during a cutscene or while the screen is
+            // loading — this was the root cause of the F10 menu crash for the host (bug fix).
+            bool menuSafe = !MissionProbe.InMissionScene && _link != null;
+            try
+            {
+                if (_chat.OnKey(e.KeyCode, _link, _browser.IsOpen || PickList.IsOpen, _clock.ElapsedMilliseconds)) return;
             if (PickList.IsOpen) { PickList.OnKey(e.KeyCode); return; }
             if (_browser.IsOpen && (e.KeyCode == _browserKey || e.KeyCode == _statusKey)) { _browser.Toggle(); return; }
             if (_browserKey != Keys.None && e.KeyCode == _browserKey) { _browser.Toggle(); return; }
@@ -935,6 +965,13 @@ namespace RDR2Coop.Mod
                 if (target == null) { Say("Co-op: nobody close enough to teleport to"); return; }
                 var to = target.Puppet.Position + new Vector3(1.5f, 1.5f, 0f);
                 ENTITY.SET_ENTITY_COORDS(RideDouble.Mover(me), to, false, false, false, false);
+            }
+            }
+            catch (Exception ex)
+            {
+                Log("key handler error: " + ex.Message);
+                if (ex.Message.Contains("browser") || ex.Message.Contains("party") || ex.Message.Contains("UI"))
+                    Say("Co-op: menu blocked during cutscene or loading");
             }
         }
 

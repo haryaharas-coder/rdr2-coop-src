@@ -29,6 +29,7 @@ namespace RDR2Coop.Mod
             if (PED.IS_PED_SWIMMING(ped)) f |= PoseFlags.Swimming;
             if (PED.IS_PED_FALLING(ped)) f |= PoseFlags.Falling;
             if (PED.IS_PED_RAGDOLL(ped)) f |= PoseFlags.Ragdoll;
+            if (PED.IS_PED_IN_MELEE_COMBAT(ped)) f |= PoseFlags.Melee;
             return _pose = f;
         }
 
@@ -56,11 +57,19 @@ namespace RDR2Coop.Mod
                 _crouchMs = now;
             }
             var them = CoopScript.ToGame(s.Position);
-            bool near = (s.Pose & Moves) != 0 && Peds.Position(ped).DistanceTo(them) < 3f;   // only read while they make a move
+            // Check reach: ragdolls can be thrown further (e.g. dynamite), so allow wider distance
+            bool near = (s.Pose & Moves) != 0 && Peds.Position(ped).DistanceTo(them) < ((s.Pose & PoseFlags.Ragdoll) != 0 ? 15f : 3f);
             var step = _moves.Update(s.Pose, near, now);
-            if ((step & StanceStep.Jump) != 0) TASK.TASK_JUMP(ped, true);
-            if ((step & StanceStep.Climb) != 0) TASK.TASK_CLIMB(ped, true);   // climbs or vaults the nearest thing: what they climbed
             if ((step & StanceStep.Ragdoll) != 0) PED.SET_PED_TO_RAGDOLL(ped, 1000, StanceTracker.RagdollMs, 0, false, false, null);
+            // If sender is NOT ragdolled, prevent puppet from staying in local ragdoll when shot by NPCs
+            else if ((s.Pose & PoseFlags.Ragdoll) == 0 && PED.IS_PED_RAGDOLL(ped))
+            {
+                PED.RESET_PED_RAGDOLL_TIMER(ped);
+            }
+            if ((s.Pose & PoseFlags.Melee) != 0 && !PED.IS_PED_RAGDOLL(ped) && !PED.IS_PED_IN_MELEE_COMBAT(ped))
+            {
+                TASK.TASK_COMBAT_HATED_TARGETS_IN_AREA(ped, them.X, them.Y, them.Z, 3f, 0, 0);
+            }
             // Still below the wall they climbed, or up where they jumped or fell from: put it beside them.
             if ((step & StanceStep.CheckLevel) != 0 && StanceTracker.OffLevel(CoopScript.ToNet(Peds.Position(ped)), s.Position))
                 ENTITY._SET_ENTITY_COORDS_AND_HEADING(ped, them, s.Heading, false, false, false);

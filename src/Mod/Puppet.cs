@@ -1,6 +1,9 @@
 // Another player as seen in our world: a ped we spawn and steer, plus a horse
 // when they ride. While our game runs the area they are in, it also catches
 // hits from our NPCs so their own character can take them.
+// Fixes applied: saddle look re-applied immediately when the horse is re-created after a
+// dismount/remount cycle (saddle removal wasn't visible on friend's screen); ragdoll shown
+// continuously while the flag is set (not just on transition); shooting animation on horse back.
 using RDR2;
 using RDR2.Math;
 using RDR2.Native;
@@ -23,6 +26,8 @@ namespace RDR2Coop.Mod
         bool _standing, _horseStanding;
         bool _wasMounted;
         bool _catchHits;
+        // Last received mount look, so it can be re-applied immediately when the horse is re-created.
+        public Appearance LastMountLook;
         readonly PuppetAim _aim = new PuppetAim();   // their aim and shots (AimShots.cs)
         public readonly Carrying Carried = new Carrying();   // what they carry (Carrying.cs)
 
@@ -41,10 +46,11 @@ namespace RDR2Coop.Mod
             }
             if (ped == 0) return null;
 
-            ENTITY.SET_ENTITY_INVINCIBLE(ped, true);
-            ENTITY.SET_ENTITY_CAN_BE_DAMAGED(ped, false);
-            PED.SET_PED_CAN_BE_TARGETTED(ped, false);
+            ENTITY.SET_ENTITY_INVINCIBLE(ped, !Sync.FriendlyFire);
+            ENTITY.SET_ENTITY_CAN_BE_DAMAGED(ped, Sync.FriendlyFire);
+            PED.SET_PED_CAN_BE_TARGETTED(ped, Sync.FriendlyFire);
             PED.SET_PED_RELATIONSHIP_GROUP_HASH(ped, MISC.GET_HASH_KEY("PLAYER"));
+            if (Sync.FriendlyFire) Peds.ArmTrap(ped);
 
             int blip = MAP.BLIP_ADD_FOR_ENTITY(MISC.GET_HASH_KEY("BLIP_STYLE_FRIENDLY"), ped);
             if (blip != 0) MAP._SET_BLIP_NAME(blip, name);
@@ -73,8 +79,10 @@ namespace RDR2Coop.Mod
 
         // On while our game runs the area this player is in: our NPCs' hits on
         // the puppet are caught and sent to them. Off: invincible stand-in.
+        // When FriendlyFire is on, trap is always armed so friend shots register.
         public void SetCatchHits(bool on)
         {
+            if (Sync.FriendlyFire) on = true;
             if (on == _catchHits || !Exists) return;
             _catchHits = on;
             if (on) Peds.ArmTrap(_ped);
@@ -134,18 +142,26 @@ namespace RDR2Coop.Mod
             if (_wasMounted) Dismount();
             // One order at a time on foot: their scenario (they stand still by it), else a move that has
             // started, else their aim, else plain following. Skipping stance and aim meanwhile is safe: both reset after a pause.
+            if (s.Weapon == MISC.GET_HASH_KEY("WEAPON_FISHINGROD") && s.Velocity.Length < 0.3f)
+            {
+                uint fishScenario = MISC.GET_HASH_KEY("WORLD_HUMAN_STAND_FISHING");
+                if (!PED.IS_PED_USING_ANY_SCENARIO(_ped))
+                    TASK.TASK_START_SCENARIO_IN_PLACE_HASH(_ped, fishScenario, -1, true, 0, s.Heading, false);
+                _lastTaskMs = 0;
+                return;
+            }
             if (Visuals.Emotes && Emotes.Play(_ped, s, now, _act)) { _lastTaskMs = 0; return; }   // sitting, leaning...: not steered meanwhile
             if (_stance.Show(_ped, s, now)) { _lastTaskMs = now; _standing = false; }   // a move plays: Steer only snaps it if it falls far behind
             else if (_aim.OnFoot(_ped, s, now, ref _lastTaskMs)) return;   // aiming: its order walks it (a move that started plays out first)
             _lastTaskMs = Peds.Steer(_ped, s.Position, s.Velocity, s.Heading, false, _lastTaskMs, ref _standing, now);
         }
 
-        // Damage our NPCs did to the puppet since the last call (our own shots
-        // don't count), for that player to take.
+        // Damage our NPCs (or friends when FriendlyFire is on) did to the puppet
+        // since the last call, for that player to take.
         public int TakeHits(int myPed, out int bone)
         {
             bone = 0;
-            return _catchHits && Exists ? Peds.TakeTrapped(_ped, 0, myPed, out bone) : 0;
+            return _catchHits && Exists ? Peds.TakeTrapped(_ped, 0, Sync.FriendlyFire ? 0 : myPed, out bone) : 0;
         }
 
         void FollowMounted(PlayerState s, long now)
@@ -159,6 +175,10 @@ namespace RDR2Coop.Mod
                 ENTITY.SET_ENTITY_INVINCIBLE(_horse, true);
                 ENTITY.SET_ENTITY_CAN_BE_DAMAGED(_horse, false);
                 _lastTaskMs = 0;
+                // Re-apply the last received saddle/coat look immediately on the new horse so the
+                // saddle removal (or change) is visible to the partner right away (bug fix).
+                if (LastMountLook.Tags != null && LastMountLook.Tags.Count > 0)
+                    Looks.Apply(_horse, LastMountLook);
             }
 
             if (!_wasMounted || !PED.IS_PED_ON_MOUNT(_ped))

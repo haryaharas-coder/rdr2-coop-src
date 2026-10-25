@@ -64,7 +64,7 @@ namespace RDR2Coop.Mod
             }
 
             var want = WaypointNotice.Follow(link.IAmHost, _marks.TryGetValue(link.HostId, out var host) ? host.At : (Vec3?)null,
-                                             own, MissionProbe.StoryMission);
+                                             own, false);   // bug fix: allow host waypoint route during story missions so friends see objective waypoint
             if (Nullable.Equals(want, _route)) return;
             ClearRoute();
             if (want == null) return;

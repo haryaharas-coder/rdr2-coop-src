@@ -44,12 +44,19 @@ namespace RDR2Coop.Mod
 
         // Ped config flags (ePedScriptConfigFlags) as the story scripts set them on horses:
         // 136 can't be mounted, 412 no horse prompts, 419 no mount prompt; 471 never kicks.
+        // When FriendMount is enabled, friends can mount and ride your horse without being kicked off.
         static void Lock(int horse, bool on)
         {
-            PED.SET_PED_CONFIG_FLAG(horse, 136, on);
-            PED.SET_PED_CONFIG_FLAG(horse, 412, on);
-            PED.SET_PED_CONFIG_FLAG(horse, 419, on);
+            bool blockMount = on && !Extras.FriendMount;
+            PED.SET_PED_CONFIG_FLAG(horse, 136, blockMount);
+            PED.SET_PED_CONFIG_FLAG(horse, 412, blockMount);
+            PED.SET_PED_CONFIG_FLAG(horse, 419, blockMount);
             PED.SET_PED_CONFIG_FLAG(horse, 471, true);
+            if (Extras.FriendMount)
+            {
+                PLAYER.SET_MIN_TIME_BEFORE_HORSE_BUCKING(horse, 999999);
+                FLOCK._SET_ANIMAL_IS_WILD(horse, false);
+            }
         }
     }
 }

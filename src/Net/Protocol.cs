@@ -41,6 +41,7 @@ namespace RDR2Coop.Net
         Swimming = 16,
         Falling = 32,
         Ragdoll = 64,
+        Melee = 128,       // tackling, grappling, punch/melee combat
     }
 
     [Flags]

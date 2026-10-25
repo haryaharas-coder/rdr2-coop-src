@@ -79,7 +79,11 @@ namespace RDR2Coop.Mod
             foreach (var kv in puppets)
             {
                 int horse = kv.Value.HorseHandle;
-                if (horse == 0 || !Riding.CanCarry(stateOf(kv.Key)) || PED.GET_MOUNT(kv.Value.Handle) != horse || !PED._IS_MOUNT_SEAT_FREE(horse, Seat)) continue;
+                if (horse == 0) continue;
+                // With FriendMount enabled, you can also mount a partner's waiting horse even if they are on foot
+                bool partnerMounted = PED.GET_MOUNT(kv.Value.Handle) == horse;
+                if (!partnerMounted && !Extras.FriendMount) continue;
+                if (partnerMounted && (!Riding.CanCarry(stateOf(kv.Key)) || !PED._IS_MOUNT_SEAT_FREE(horse, Seat))) continue;
                 float d = Peds.Position(horse).DistanceTo(at);
                 if (d > best) continue;
                 best = d; _near = kv.Key; _nearHorse = horse;

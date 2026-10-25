@@ -1,6 +1,8 @@
 // Dynamite, fire bottles and explosive ammo (0.8.0): the Explosion notice a player sends when they set
 // one off ("kind x y z"; later versions may add fields after these), the kinds that are passed on, and
 // how many a player may set off in a second. The game side is src/Mod/Explosions.cs.
+// Vehicle explosions (oil wagons, barrels the player shot) are also passed on; the fire that follows
+// a molotov (kind 3 after kind 2) is included so the blaze shows on both screens.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -9,11 +11,13 @@ namespace RDR2Coop.Net
 {
     public static class Blast
     {
-        // The game's explosion tags (EXP_TAG_*) a player's weapons make; nothing else (wagons, trains,
-        // barrels, lightning) is passed on, or made from a notice.
+        // The game's explosion tags (EXP_TAG_*) a player's weapons make, or vehicles they shot.
+        // Vehicle kinds (19 car, 20 plane, 24 boat/lantern) are now included so shooting an oil
+        // wagon or a vehicle the player targeted syncs the blast to partners.
         public static readonly Dictionary<int, string> Kinds = new Dictionary<int, string>
         {
-            { 2, "fire bottle" }, { 3, "volatile fire bottle" }, { 12, "explosive round" }, { 24, "lantern" },
+            { 2, "fire bottle" }, { 3, "fire" }, { 12, "explosive round" }, { 19, "vehicle" },
+            { 20, "plane" }, { 24, "lantern" },
             { 25, "dynamite" }, { 26, "dynamite bundle" }, { 27, "volatile dynamite" }, { 29, "placed dynamite" },
             { 30, "fire arrow" }, { 31, "dynamite arrow" }, { 32, "phosphorus round" }, { 35, "poison bottle" },
         };

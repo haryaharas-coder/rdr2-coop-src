@@ -1,6 +1,11 @@
 // A player's look as the list of meta-ped pieces (model parts, textures,
 // colours) the game shows, captured from our character and put on puppets.
+// Tags are sorted by (Drawable, Albedo) before returning so the Signature()
+// hash is order-independent — the game sometimes returns them in a different
+// order — preventing phantom look re-sends and missed genuine changes (bug fix:
+// clothing doesn't sync sometimes).
 using System.Collections.Generic;
+using System.Linq;
 using RDR2.Native;
 using RDR2Coop.Net;
 
@@ -24,6 +29,8 @@ namespace RDR2Coop.Mod
                     Tint0 = (byte)t0, Tint1 = (byte)t1, Tint2 = (byte)t2,
                 });
             }
+            // Sort so the signature is stable regardless of the order the game returns components.
+            a.Tags = a.Tags.OrderBy(t => t.Drawable).ThenBy(t => t.Albedo).ToList();
             return a;
         }
 

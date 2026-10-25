@@ -344,17 +344,19 @@ namespace RDR2Coop.Mod
             if (MissionProbe.StoryMission)
             {
                 bool hostile = IsHostile(ped, me, shooter != null ? new[] { shooter } : new Puppet[0]);
-                // Hurting an ally (or an ally's horse) fails the mission for
-                // everyone: guests only hurt enemies and wild animals then.
-                if (!hostile && (PED.IS_PED_HUMAN(ped) || PED._IS_THIS_MODEL_A_HORSE(ENTITY.GET_ENTITY_MODEL(ped))))
+                // Only actual mission group members (companion gang members) fail the mission when hurt;
+                // target NPCs in missions (e.g. friend missions) can be shot and killed by guests.
+                bool isAlly = PED.IS_PED_GROUP_MEMBER(ped, PLAYER.GET_PLAYER_GROUP(PLAYER.PLAYER_ID()), false)
+                    || (PED.GET_RELATIONSHIP_BETWEEN_PEDS(ped, me) <= 2 && PED.IS_PED_A_PLAYER(ped));
+                if (isAlly && !hostile && (PED.IS_PED_HUMAN(ped) || PED._IS_THIS_MODEL_A_HORSE(ENTITY.GET_ENTITY_MODEL(ped))))
                 {
-                    CoopScript.Log($"mission: ignored a guest hit on non-hostile {ENTITY.GET_ENTITY_MODEL(ped):X8}");
+                    CoopScript.Log($"mission: ignored a guest hit on companion ally {ENTITY.GET_ENTITY_MODEL(ped):X8}");
                     return;
                 }
                 // Missions check "killed by the player" on named enemies; once a
                 // fight is on, credit the host. Never before: an unalerted guard
                 // hurt "by the player" fails stealth missions.
-                if (hostile) inflictor = me;
+                if (hostile || !isAlly) inflictor = me;
             }
             HitWeapons[ped] = hit.Weapon;   // enRage's damage event has no weapon for script damage
             PED.APPLY_DAMAGE_TO_PED(ped, damage, 0, hit.Bone, inflictor);

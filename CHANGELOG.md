@@ -3,6 +3,19 @@
 Servers and players must run the same protocol version; when it changes, update
 the server's relay.py together with the mod.
 
+## 0.9.0-beta.7 (unreleased) - protocol 13
+- Comprehensive stability & sync patch: fixed black screen during cutscenes and loading screens,
+  fixed duplicated NPCs in missions by cleaning orphan local peds when following the host, fixed
+  shooting NPCs in friend/companion missions, fixed map objective waypoints in missions for friends,
+  fixed NPC clothes updating from friend's perspective after model change, fixed auto-revive triggering
+  during cutscenes, guarded F10 menu from crashing host during transitions, fixed ragdoll sync
+  and asymmetry during explosions and combat, fixed horse passenger shooting animation, fixed
+  vehicle explosion sync (Cornwall oil wagons), fixed campfire visibility and sync, fixed saddle
+  state sync when removed from horses, fixed fishing animation and rod hold sync, fixed corpse
+  carrying holding pose, fixed fist combat and melee knockouts getting back up, added friendly fire
+  support, added friend mount support, added time scale restoration (no Dead Eye / Eagle Eye slow-mo
+  in session), unpaused multiplayer on pause menu, added camp funds sync, and enabled native RDO voice chat.
+
 ## 0.9.0-beta.6 (beta, 25 Oct 2026) - protocol 13
 - Betas can send your co-op logs to the developer automatically, so bugs get
   looked at without a report: asked once in game (Y/N, 90 s), kept in

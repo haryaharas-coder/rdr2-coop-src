@@ -114,6 +114,8 @@ namespace RDR2Coop.Mod
         }
 
         // Each new shot of theirs with a gun: a muzzle flash at the gun in its hand and a gunshot.
+        // Also plays the mounted-shooting flash when the puppet is seated on a horse as a passenger
+        // (ride double) so the firing animation shows on a friend's screen (bug fix).
         public void ShowShots(int ped, PlayerState s)
         {
             if (!Visuals.Aiming) return;
@@ -137,6 +139,12 @@ namespace RDR2Coop.Mod
             _soundsAsked = true;
             // shortcut: one sound per name plays at a time, so fast fire drops some; play them by sound id if testers notice.
             if (AUDIO.PREPARE_SOUNDSET(ShotSounds, false)) AUDIO.PLAY_SOUND_FROM_ENTITY(ShotSound, muzzle >= 0 ? gun : ped, ShotSounds, false, 0, 0);
+
+            // Passenger-seat shooting: trigger a shoot-from-mount animation task so the aiming/fire
+            // pose shows when the puppet is in seat 0 (behind the rider). Without this the puppet
+            // just stands still with no animation (bug fix: no shooting animation on horse back).
+            if (PED.IS_PED_ON_MOUNT(ped) && PED.GET_SEAT_PED_IS_TRYING_TO_ENTER(ped) != -1 && (s.Pose & PoseFlags.Aiming) != 0)
+                TASK.TASK_SHOOT_AT_COORD(ped, s.AimAt.X, s.AimAt.Y, s.AimAt.Z, 500, MISC.GET_HASH_KEY("FIRING_PATTERN_SINGLE_SHOT"), 0);
         }
 
         // The game's own muzzle flashes ("core" effects).

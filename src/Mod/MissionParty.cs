@@ -201,10 +201,12 @@ namespace RDR2Coop.Mod
             if (_hidden) return;
             _hidden = true;
             var me = Game.Player.Character;
-            CAM.DO_SCREEN_FADE_OUT(500);
+            // Freeze position and disable control, but do not black out the screen with FADE_OUT,
+            // so party members can watch the cutscene instead of staring at a black screen (bug fix).
             ENTITY.FREEZE_ENTITY_POSITION(me.Handle, true);
             ENTITY.SET_ENTITY_INVINCIBLE(me.Handle, true);
             PLAYER.SET_PLAYER_CONTROL(Game.Player.Handle, false, 0, false);
+            if (CAM.IS_SCREEN_FADED_OUT() && !MissionProbe.InMissionScene) CAM.DO_SCREEN_FADE_IN(300);
         }
 
         void Show()
@@ -215,7 +217,7 @@ namespace RDR2Coop.Mod
             ENTITY.FREEZE_ENTITY_POSITION(me.Handle, false);
             ENTITY.SET_ENTITY_INVINCIBLE(me.Handle, false);
             PLAYER.SET_PLAYER_CONTROL(Game.Player.Handle, true, 0, false);
-            CAM.DO_SCREEN_FADE_IN(800);
+            CAM.DO_SCREEN_FADE_IN(500);
         }
 
         public void Leave()

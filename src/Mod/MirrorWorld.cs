@@ -92,6 +92,7 @@ namespace RDR2Coop.Mod
             {
                 _lastClearMs = now;
                 ClearLocalPeds(puppets.Values);
+                RetryMissingModels(now);   // retry models that failed to stream in, once per minute
             }
             _myId = link.MyId;
 
@@ -177,10 +178,13 @@ namespace RDR2Coop.Mod
                 m.Outfit = e.Outfit;
                 m.LookSig = 0;   // the full look goes on top of the outfit again
             }
+            // Re-apply clothing whenever the incoming look's signature differs from what we applied,
+            // even without an outfit change: fixes NPC clothes not updating from a friend's perspective.
             if (_looks.TryGetValue(e.Id, out var look) && look.Model == e.Model && m.LookSig != look.Signature())
             {
                 Looks.Apply(m.Ped, look);
                 m.LookSig = look.Signature();
+                CoopScript.Log($"copy {e.Id}: look updated ({look.Tags?.Count ?? 0} pieces)");
             }
 
             // A spawned ped starts in its model's default group; for Arthur's
@@ -285,6 +289,22 @@ namespace RDR2Coop.Mod
                 CoopScript.Log($"model {model:X8} didn't load in 15 s; copies with it stay invisible");
             }
             return false;
+        }
+
+        // Retry models that previously failed to load: they may have been slow to stream in a busy area.
+        // Removes from _missingModels after 60 s so the next tick tries again.
+        void RetryMissingModels(long now)
+        {
+            if (_missingModels.Count == 0) return;
+            foreach (var model in _missingModels.ToList())
+            {
+                if (!_loadingSince.TryGetValue(model, out long failed)) { _loadingSince[model] = now; continue; }
+                if (now - failed > 60000)
+                {
+                    _missingModels.Remove(model);
+                    _loadingSince.Remove(model);
+                }
+            }
         }
 
         void UpdateVehicle(VehicleState v, bool copyDrives, long now)
@@ -642,7 +662,9 @@ namespace RDR2Coop.Mod
                 if (IsCopyGroup(h)) orphans++;   // a copy we lost track of: a mission entity, but ours to delete
                 else
                 {
-                    if (ENTITY.IS_ENTITY_A_MISSION_ENTITY(h) || TableGames.CardPlayer(h)) continue;
+                    // While showing another player's world, remove local ambient and mission peds that aren't
+                    // our own character/horse/puppets, preventing duplicated NPCs in missions.
+                    if (TableGames.CardPlayer(h)) continue;
                     if (PED._GET_VEHICLE_DRAFT_HORSE_IS_ATTACHED_TO(h) != 0) continue;   // goes with its wagon below
                     if (Peds.Position(h).DistanceTo(mePos) > ClearRadius) continue;
                 }

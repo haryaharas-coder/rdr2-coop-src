@@ -35,11 +35,14 @@ namespace RDR2Coop.Mod
         public static bool Doors = true;        // doors and broken things match
         public static bool Trains = true;       // trains players drive, and ones the mod didn't know
         public static bool MiniGames = true;    // co-op stands back while you play poker, blackjack, dominoes...
+        public static bool FriendlyFire = true; // shoot each other with guns/fists/explosions
+        public static bool CampFunds = true;    // sync camp ledger funds and upgrades
 
         public static void Load(Ini ini)
         {
             Markers = On(ini, "Markers"); MissionSteps = On(ini, "MissionSteps"); OwnMissionsAsGuest = ini.Get("Gameplay", "OwnMissionsAsGuest", "No").Trim().Equals("Yes", System.StringComparison.OrdinalIgnoreCase); Explosions = On(ini, "Explosions");
             Law = On(ini, "Law"); Doors = On(ini, "Doors"); Trains = On(ini, "Trains"); MiniGames = On(ini, "MiniGames");
+            FriendlyFire = On(ini, "FriendlyFire"); CampFunds = On(ini, "CampFunds");
         }
 
         static bool On(Ini ini, string key) => !ini.Get("Gameplay", key, "Yes").StartsWith("n", StringComparison.OrdinalIgnoreCase);
@@ -57,11 +60,15 @@ namespace RDR2Coop.Mod
         public static bool Scoreboard = true;  // the session's kills, wins and winnings
         public static bool Spectate = true;    // watch a partner while you're down or dead
         public static bool EmoteMenu = true;   // the mod's emote menu (wave, point, laugh...), seen by partners
+        public static bool SuppressSlowMo = true; // disable time-slow in Dead Eye / Eagle Eye and pause menu
+        public static bool FriendMount = true; // friend can ride your horse as driver
+        public static bool VoiceChat = true;   // in-game RDO voice chat
 
         public static void Load(Ini ini)
         {
             Chat = On(ini, "Chat"); Waypoint = On(ini, "Waypoint"); PartyList = On(ini, "PartyList"); RideDouble = On(ini, "RideDouble");
             Ping = On(ini, "Ping"); GiveMoney = On(ini, "GiveMoney"); Scoreboard = On(ini, "Scoreboard"); Spectate = On(ini, "Spectate"); EmoteMenu = On(ini, "EmoteMenu");
+            SuppressSlowMo = On(ini, "SuppressSlowMo"); FriendMount = On(ini, "FriendMount"); VoiceChat = On(ini, "VoiceChat");
         }
 
         static bool On(Ini ini, string key) => !ini.Get("Convenience", key, "Yes").StartsWith("n", StringComparison.OrdinalIgnoreCase);

@@ -140,6 +140,8 @@ namespace RDR2Coop.Mod
 
         // Damage dealt by a ped since the last check (0 if none). `attacker`
         // restricts it to one ped; `ignore` skips one ped (friendly fire).
+        // Melee/fist damage is included: HAS_ENTITY_BEEN_DAMAGED_BY_ANY_PED covers both weapon
+        // and unarmed hits, so fist kills now propagate to the owner's game (bug fix).
         public static unsafe int TakeTrapped(int ped, int attacker, int ignore, out int bone)
         {
             bone = 0;
@@ -154,10 +156,14 @@ namespace RDR2Coop.Mod
             int b = 0;
             if (PED.GET_PED_LAST_DAMAGE_BONE(ped, &b)) bone = b;
 
+            int damage = TrapHealth - health;
             ENTITY.SET_ENTITY_HEALTH(ped, TrapHealth, 0);
             ENTITY.CLEAR_ENTITY_LAST_DAMAGE_ENTITY(ped);
             PED.CLEAR_PED_LAST_DAMAGE_BONE(ped);
-            return byPed ? TrapHealth - health : 0;
+            // Fists deal very low damage per hit; return at least 1 so repeated hits accumulate
+            // in the owner's game and eventually kill the NPC (bug fix: fist kills NPC keeps getting up).
+            if (!byPed) return 0;
+            return damage > 0 ? damage : 1;
         }
     }
 }

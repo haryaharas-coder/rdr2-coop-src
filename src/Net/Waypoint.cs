@@ -26,9 +26,8 @@ namespace RDR2Coop.Net
             return true;
         }
 
-        // The host's waypoint becomes our GPS route only while we have none of our own (a
-        // player's own waypoint always wins), we aren't the host, and no story mission of ours
-        // could be using the GPS.
+        // The host's waypoint becomes our GPS route while we have none of our own (a
+        // player's own waypoint always wins) and we aren't the host.
         public static Vec3? Follow(bool iAmHost, Vec3? hosts, bool ownWaypoint, bool inMission) =>
             iAmHost || ownWaypoint || inMission ? null : hosts;
 

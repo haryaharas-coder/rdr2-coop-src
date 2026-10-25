@@ -72,7 +72,7 @@ namespace RDR2Coop.Mod
                 if (following && Health <= MaxHealth * DownAt) GoDown("low health");
                 else if (_returnAfterDeath && ownerPos.HasValue)
                 {
-                    if (combat) _calmSince = -1;
+                    if (combat || MissionProbe.InMissionScene) _calmSince = -1;
                     else if (_calmSince < 0) _calmSince = now;
                     else if (now - _calmSince > CalmMs)
                     {
@@ -91,7 +91,9 @@ namespace RDR2Coop.Mod
                 _lastRagdoll = now;
                 PED.SET_PED_TO_RAGDOLL(me.Handle, 2000, 2000, 0, false, false, null);
             }
-            if (combat) _calmSince = -1;
+            // Never start the calm timer while a story cutscene plays: the lack of combat during
+            // a cutscene would otherwise auto-revive after 10 s mid-scene (bug: auto-revive on cutscene end).
+            if (combat || MissionProbe.InMissionScene) _calmSince = -1;
             else if (_calmSince < 0) _calmSince = now;
             if (_calmSince >= 0 && now - _calmSince > CalmMs)
             {

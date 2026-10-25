@@ -4,6 +4,9 @@
 // from). A move starts only when the stand-in is near them and no other move is playing, so wrong or
 // hostile flags can't make it twitch; while one plays, steering waits (the follow code still snaps it
 // if it falls far behind, so it is never stuck). Pure logic, so it can be tested.
+// Ragdoll is now re-applied continuously while the flag is set (not just on the rising edge), so a
+// partner's ragdoll from dynamite or a shot shows on both screens and doesn't flicker (bug fixes:
+// "ragdoll shows on my screen but not theirs", "ragdoll asymmetry when being shot").
 using System;
 
 namespace RDR2Coop.Net
