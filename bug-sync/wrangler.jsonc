@@ -6,7 +6,7 @@
   "compatibility_date": "2026-09-01",
   "triggers": { "crons": ["*/5 * * * *"] },
   "vars": {
-    "REPO": "BigCheeseThe3st/rdr2-coop",
+    "REPO": "BigCheeseThe3st/rdr2-coop-src",
     "GUILD_ID": "1563512390056943709",
     "FORUM_ID": "1563553301960855663",
     "BOT_ID": "1563513356122325052",

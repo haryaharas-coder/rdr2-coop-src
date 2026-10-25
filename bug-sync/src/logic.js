@@ -2,7 +2,7 @@
 
 /** The GitHub issue number the bot already linked in this thread, or 0. */
 export function linkedIssue(messages, botId, repo) {
-  const re = new RegExp(`github\\.com/${repo.replace('/', '\\/')}/issues/(\\d+)`)
+  const re = new RegExp(`github\\.com/${repo.split('/')[0]}/[\\w.-]+/issues/(\\d+)`)   // any repo of ours: the tracker moved once, the numbers didn't
   for (const m of messages) {
     if (m.author?.id !== botId) continue
     const hit = re.exec(m.content || '')
